@@ -7,6 +7,7 @@ import pickle
 from bs4 import BeautifulSoup
 from datetime import datetime
 from duckduckgo_search import DDGS
+from fastapi import Request
 
 # Initialize database
 def init_db():
@@ -556,6 +557,13 @@ select:focus, input[type="text"]:focus, textarea:focus {
 
 # Initialize database
 init_db()
+
+ALLOWED_IP = os.environ.get("ALLOWED_IP", "YOUR_IP_ADDRESS")  # Replace with your actual IP or set as env var
+API_KEY = os.environ.get("API_KEY", "your_api_key_here")  # Set your API key here or as env var
+
+def is_request_from_allowed_ip(request: Request):
+    client_ip = request.client.host
+    return client_ip == ALLOWED_IP
 
 # Create Gradio interface
 with gr.Blocks(css=custom_css) as demo:
