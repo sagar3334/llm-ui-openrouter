@@ -28,6 +28,7 @@ import stat as st
 import sqlite3
 import hashlib
 import gradio as gr
+import duckduckgo_search
 
 from _collections_abc import _check_methods
 
@@ -1258,3 +1259,5 @@ register_btn.click(
     [login_username, login_password],
     [login_status]
 )
+
+print("duckduckgo_search is installed!")
