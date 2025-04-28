@@ -781,6 +781,11 @@ with gr.Blocks(css=custom_css) as demo:
     # Set the value of the previous conversations box on load
     previous_convos.value = get_all_conversations()
 
+    # Add a timer to update chat history every 10 minutes (600 seconds)
+    def update_convos():
+        return get_all_conversations()
+    previous_convos.change(fn=update_convos, inputs=None, outputs=previous_convos, every=600)
+
 # Launch the app
 if __name__ == "__main__":
     demo.launch()
