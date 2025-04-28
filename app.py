@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from duckduckgo_search import DDGS
 from fastapi import Request
+from gtts import gTTS
 
 # Initialize database
 def init_db():
@@ -599,6 +600,7 @@ with gr.Blocks(css=custom_css) as demo:
                 avatar_images=(None, "https://api.dicebear.com/7.x/bottts/svg?seed=openrouter"),
                 height=600
             )
+            audio_output = gr.Audio(label="Bot Reads Out Loud", interactive=False, type="filepath")
             
             with gr.Row():
                 msg = gr.Textbox(
@@ -691,36 +693,33 @@ with gr.Blocks(css=custom_css) as demo:
     def respond(message, chat_history, model_name, system_prompt, api_key, enable_web_search, base_url):
         try:
             if not message.strip():
-                return "", chat_history
+                return "", chat_history, None
             # Try to get model ID from dynamic models first, then fall back to predefined models
             if dynamic_models and model_name in dynamic_models:
                 model_id = dynamic_models[model_name]
             elif model_name in MODELS:
                 model_id = MODELS[model_name]
             else:
-                # If model not found, use Claude 3 Opus as fallback
                 model_id = "anthropic/claude-3-opus"
-
-            # If search: command, show results as a separate message
             if enable_web_search and message.lower().startswith("search:"):
                 search_query = message[7:].strip()
                 if not search_query:
                     chat_history.append((message, "Please provide a search query after 'search:'"))
-                    return "", chat_history
+                    return "", chat_history, None
                 search_results = web_search(search_query)
                 chat_history.append((message, search_results))
-                # Now get the model's answer using the search results as context
                 bot_message = chat(message, chat_history[:-1], model_id, system_prompt, api_key, enable_web_search, base_url)
                 chat_history.append(("[AI Response]", bot_message))
-                return "", chat_history
             else:
                 bot_message = chat(message, chat_history, model_id, system_prompt, api_key, enable_web_search, base_url)
                 chat_history.append((message, bot_message))
-                return "", chat_history
+            # Generate TTS audio for the bot's reply
+            audio_path = text_to_speech(bot_message) if bot_message else None
+            return "", chat_history, audio_path
         except Exception as e:
             error_message = f"Error: {str(e)}"
             chat_history.append((message, error_message))
-            return "", chat_history
+            return "", chat_history, None
     
     def save_user_settings(api_key, base_url, system_prompt, enable_web_search):
         result = save_settings(api_key, base_url, system_prompt, enable_web_search)
@@ -741,13 +740,13 @@ with gr.Blocks(css=custom_css) as demo:
     msg.submit(
         respond,
         [msg, chatbot, model_dropdown, system_prompt, api_key, enable_web_search, base_url],
-        [msg, chatbot]
+        [msg, chatbot, audio_output]
     )
     
     submit_btn.click(
         respond,
         [msg, chatbot, model_dropdown, system_prompt, api_key, enable_web_search, base_url],
-        [msg, chatbot]
+        [msg, chatbot, audio_output]
     )
     
     save_settings_btn.click(
@@ -788,6 +787,15 @@ with gr.Blocks(css=custom_css) as demo:
         None,
         previous_convos
     )
+
+def text_to_speech(text, lang='en', filename='tts_output.mp3'):
+    try:
+        tts = gTTS(text=text, lang=lang)
+        tts.save(filename)
+        return filename
+    except Exception as e:
+        print(f"TTS error: {e}")
+        return None
 
 # Launch the app
 if __name__ == "__main__":
