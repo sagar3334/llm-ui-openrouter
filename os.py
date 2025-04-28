@@ -28,7 +28,7 @@ import stat as st
 import sqlite3
 import hashlib
 import gradio as gr
-import duckduckgo_search
+from duckduckgo_search import DDGS
 
 from _collections_abc import _check_methods
 
