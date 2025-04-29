@@ -602,6 +602,13 @@ with gr.Blocks(css=custom_css) as demo:
             )
             audio_output = gr.Audio(label="Bot Reads Out Loud", interactive=False, type="filepath")
             
+            # Add language selection dropdown for TTS
+            tts_lang_dropdown = gr.Dropdown(
+                choices=[("English", "en"), ("Nepali", "ne")],
+                value="en",
+                label="TTS Language (Read Out Loud)"
+            )
+            
             with gr.Row():
                 msg = gr.Textbox(
                     placeholder="Type your message here... (Use 'search: query' for web search or 'url: website' to fetch webpage content)",
@@ -690,7 +697,7 @@ with gr.Blocks(css=custom_css) as demo:
     """)
     
     # Set up event handlers
-    def respond(message, chat_history, model_name, system_prompt, api_key, enable_web_search, base_url):
+    def respond(message, chat_history, model_name, system_prompt, api_key, enable_web_search, base_url, tts_lang):
         try:
             if not message.strip():
                 return "", chat_history, None
@@ -713,8 +720,8 @@ with gr.Blocks(css=custom_css) as demo:
             else:
                 bot_message = chat(message, chat_history, model_id, system_prompt, api_key, enable_web_search, base_url)
                 chat_history.append((message, bot_message))
-            # Generate TTS audio for the bot's reply
-            audio_path = text_to_speech(bot_message) if bot_message else None
+            # Generate TTS audio for the bot's reply, using selected language
+            audio_path = text_to_speech(bot_message, lang=tts_lang) if bot_message else None
             return "", chat_history, audio_path
         except Exception as e:
             error_message = f"Error: {str(e)}"
@@ -739,13 +746,13 @@ with gr.Blocks(css=custom_css) as demo:
     
     msg.submit(
         respond,
-        [msg, chatbot, model_dropdown, system_prompt, api_key, enable_web_search, base_url],
+        [msg, chatbot, model_dropdown, system_prompt, api_key, enable_web_search, base_url, tts_lang_dropdown],
         [msg, chatbot, audio_output]
     )
     
     submit_btn.click(
         respond,
-        [msg, chatbot, model_dropdown, system_prompt, api_key, enable_web_search, base_url],
+        [msg, chatbot, model_dropdown, system_prompt, api_key, enable_web_search, base_url, tts_lang_dropdown],
         [msg, chatbot, audio_output]
     )
     
