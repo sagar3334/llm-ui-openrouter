@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from duckduckgo_search import DDGS
 from fastapi import Request
-from TTS.api import TTS as CoquiTTS
+import pyttsx3
 
 # Initialize database
 def init_db():
@@ -797,20 +797,26 @@ with gr.Blocks(css=custom_css) as demo:
 
 def text_to_speech(text, lang='en', filename='tts_output.wav'):
     try:
-        # Map language codes to Coqui TTS models
-        lang_models = {
-            'en': 'tts_models/en/ljspeech/tacotron2-DDC'
-        }
-        model_name = lang_models.get(lang, lang_models['en'])
-        tts = CoquiTTS(model_name)
-        tts.tts_to_file(text=text, file_path=filename)
+        engine = pyttsx3.init()
+        # Set language/voice if possible
+        if lang == 'ne':
+            # Nepali support depends on system voices; fallback to default if not found
+            voices = engine.getProperty('voices')
+            nepali_voice = next((v for v in voices if 'ne' in v.id or 'Nepali' in v.name), None)
+            if nepali_voice:
+                engine.setProperty('voice', nepali_voice.id)
+        else:
+            # Default to English
+            voices = engine.getProperty('voices')
+            en_voice = next((v for v in voices if 'en' in v.id or 'English' in v.name), None)
+            if en_voice:
+                engine.setProperty('voice', en_voice.id)
+        engine.save_to_file(text, filename)
+        engine.runAndWait()
         return filename
     except Exception as e:
-        print(f"Coqui TTS error: {e}")
+        print(f"pyttsx3 TTS error: {e}")
         return None
-
-# Pre-download the TTS model
-CoquiTTS("tts_models/en/ljspeech/tacotron2-DDC")
 
 # Launch the app
 if __name__ == "__main__":
