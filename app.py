@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 from duckduckgo_search import DDGS
 from fastapi import Request
-from gtts import gTTS
+from TTS.api import TTS as CoquiTTS
 
 # Initialize database
 def init_db():
@@ -795,13 +795,19 @@ with gr.Blocks(css=custom_css) as demo:
         previous_convos
     )
 
-def text_to_speech(text, lang='en', filename='tts_output.mp3'):
+def text_to_speech(text, lang='en', filename='tts_output.wav'):
     try:
-        tts = gTTS(text=text, lang=lang)
-        tts.save(filename)
+        # Map language codes to Coqui TTS models
+        lang_models = {
+            'en': 'tts_models/en/ljspeech/tacotron2-DDC',
+            'ne': 'tts_models/multilingual/multi-dataset/your_tts'  # Nepali support is experimental
+        }
+        model_name = lang_models.get(lang, lang_models['en'])
+        tts = CoquiTTS(model_name)
+        tts.tts_to_file(text=text, file_path=filename)
         return filename
     except Exception as e:
-        print(f"TTS error: {e}")
+        print(f"Coqui TTS error: {e}")
         return None
 
 # Launch the app
