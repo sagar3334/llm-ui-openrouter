@@ -799,8 +799,7 @@ def text_to_speech(text, lang='en', filename='tts_output.wav'):
     try:
         # Map language codes to Coqui TTS models
         lang_models = {
-            'en': 'tts_models/en/ljspeech/tacotron2-DDC',
-            'ne': 'tts_models/multilingual/multi-dataset/your_tts'  # Nepali support is experimental
+            'en': 'tts_models/en/ljspeech/tacotron2-DDC'
         }
         model_name = lang_models.get(lang, lang_models['en'])
         tts = CoquiTTS(model_name)
@@ -810,6 +809,10 @@ def text_to_speech(text, lang='en', filename='tts_output.wav'):
         print(f"Coqui TTS error: {e}")
         return None
 
+# Pre-download the TTS model
+CoquiTTS("tts_models/en/ljspeech/tacotron2-DDC")
+
 # Launch the app
 if __name__ == "__main__":
-    demo.launch()
+    port = int(os.environ.get("PORT", 8080))
+    demo.launch(server_name="0.0.0.0", server_port=port)

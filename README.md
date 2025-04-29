@@ -105,3 +105,28 @@ The application includes a comprehensive list of models available through OpenRo
 - Requests
 - BeautifulSoup4
 - SQLite3
+
+## Azure Speech (Microsoft TTS) Setup
+
+To use Microsoft TTS (Azure Speech), you need to set the following environment variables with your Azure Speech resource credentials:
+
+- `AZURE_SPEECH_KEY` — Your Azure Speech resource key
+- `AZURE_SPEECH_REGION` — The region of your Azure Speech resource (e.g., `eastus`)
+
+You can set these in your terminal before running the app:
+
+**Windows (PowerShell):**
+```powershell
+$env:AZURE_SPEECH_KEY="your_speech_key_here"
+$env:AZURE_SPEECH_REGION="your_region_here"
+python app.py
+```
+
+**Linux/macOS:**
+```bash
+export AZURE_SPEECH_KEY="your_speech_key_here"
+export AZURE_SPEECH_REGION="your_region_here"
+python app.py
+```
+
+The chatbot will use Azure TTS for English (en-US, default) and Nepali (ne-NP) voice output.
