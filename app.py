@@ -9,6 +9,7 @@ from datetime import datetime
 from duckduckgo_search import DDGS
 from fastapi import Request
 import pyttsx3
+from init_db import check_login, register_user
 
 # Initialize database
 def init_db():
@@ -21,20 +22,21 @@ def init_db():
         user_message TEXT,
         assistant_message TEXT,
         model TEXT,
-        system_prompt TEXT
+        system_prompt TEXT,
+        username TEXT
     )
     ''')
     conn.commit()
     conn.close()
 
 # Save conversation to database
-def save_to_db(user_message, assistant_message, model, system_prompt):
+def save_to_db(user_message, assistant_message, model, system_prompt, username=""):
     conn = sqlite3.connect('chat_history.db')
     cursor = conn.cursor()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cursor.execute(
-        "INSERT INTO conversations (timestamp, user_message, assistant_message, model, system_prompt) VALUES (?, ?, ?, ?, ?)",
-        (timestamp, user_message, assistant_message, model, system_prompt)
+        "INSERT INTO conversations (timestamp, user_message, assistant_message, model, system_prompt, username) VALUES (?, ?, ?, ?, ?, ?)",
+        (timestamp, user_message, assistant_message, model, system_prompt, username)
     )
     conn.commit()
     conn.close()
@@ -279,7 +281,7 @@ def chat_with_openrouter(messages, model, api_key, base_url="https://openrouter.
         return f"Error: {str(e)}"
 
 # Chat function for Gradio
-def chat(message, history, model, system_prompt, api_key, enable_web_search, base_url):
+def chat(message, history, model, system_prompt, api_key, enable_web_search, base_url, current_user):
     try:
         # Check if API key is provided
         if not api_key:
@@ -352,7 +354,7 @@ def chat(message, history, model, system_prompt, api_key, enable_web_search, bas
         
         # Save to database
         try:
-            save_to_db(message, response, model, system_prompt)
+            save_to_db(message, response, model, system_prompt, current_user)
         except Exception as db_error:
             print(f"Warning: Could not save to database: {str(db_error)}")
         
@@ -579,6 +581,41 @@ with gr.Blocks(css=custom_css) as demo:
     </div>
     """)
     
+    # Add login section
+    with gr.Row():
+        with gr.Column():
+            login_username = gr.Textbox(label="Username")
+            login_password = gr.Textbox(label="Password", type="password")
+            login_btn = gr.Button("Login")
+            register_btn = gr.Button("Register")
+            login_status = gr.Textbox(label="Status", interactive=False)
+    
+    # Add current user state
+    current_user = gr.State("")
+    
+    # Add login handlers
+    def handle_login(username, password):
+        if check_login(username, password):
+            return gr.update(value="Login successful!"), username
+        else:
+            return gr.update(value="Invalid username or password."), ""
+
+    def handle_register(username, password):
+        success, msg = register_user(username, password)
+        return gr.update(value=msg)
+
+    login_btn.click(
+        handle_login,
+        [login_username, login_password],
+        [login_status, current_user]
+    )
+    
+    register_btn.click(
+        handle_register,
+        [login_username, login_password],
+        [login_status]
+    )
+    
     # Load saved settings
     saved_settings = load_settings()
     
@@ -697,7 +734,7 @@ with gr.Blocks(css=custom_css) as demo:
     """)
     
     # Set up event handlers
-    def respond(message, chat_history, model_name, system_prompt, api_key, enable_web_search, base_url, tts_lang):
+    def respond(message, chat_history, model_name, system_prompt, api_key, enable_web_search, base_url, tts_lang, current_user):
         try:
             if not message.strip():
                 return "", chat_history, None
@@ -715,10 +752,10 @@ with gr.Blocks(css=custom_css) as demo:
                     return "", chat_history, None
                 search_results = web_search(search_query)
                 chat_history.append((message, search_results))
-                bot_message = chat(message, chat_history[:-1], model_id, system_prompt, api_key, enable_web_search, base_url)
+                bot_message = chat(message, chat_history[:-1], model_id, system_prompt, api_key, enable_web_search, base_url, current_user)
                 chat_history.append(("[AI Response]", bot_message))
             else:
-                bot_message = chat(message, chat_history, model_id, system_prompt, api_key, enable_web_search, base_url)
+                bot_message = chat(message, chat_history, model_id, system_prompt, api_key, enable_web_search, base_url, current_user)
                 chat_history.append((message, bot_message))
             # Generate TTS audio for the bot's reply, using selected language
             audio_path = text_to_speech(bot_message, lang=tts_lang) if bot_message else None
@@ -746,13 +783,13 @@ with gr.Blocks(css=custom_css) as demo:
     
     msg.submit(
         respond,
-        [msg, chatbot, model_dropdown, system_prompt, api_key, enable_web_search, base_url, tts_lang_dropdown],
+        [msg, chatbot, model_dropdown, system_prompt, api_key, enable_web_search, base_url, tts_lang_dropdown, current_user],
         [msg, chatbot, audio_output]
     )
     
     submit_btn.click(
         respond,
-        [msg, chatbot, model_dropdown, system_prompt, api_key, enable_web_search, base_url, tts_lang_dropdown],
+        [msg, chatbot, model_dropdown, system_prompt, api_key, enable_web_search, base_url, tts_lang_dropdown, current_user],
         [msg, chatbot, audio_output]
     )
     
